@@ -1,0 +1,473 @@
+---
+title: 'Business Statistics Mid-Term Assessment IB94X0 2021-2022 #1'
+author: '2152449'
+output:
+  html_document:
+    toc: yes
+    toc_depth: 3
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup, message=FALSE}
+library(tidyverse)
+options(width=100)
+```
+
+---
+
+Rename this file and the folder it is in with your student number (e.g., "1912345.Rmd")
+
+Submit this file and the knitted pdf as a zip file (e.g., 1912345.zip) _by right clicking on the folder to zip it_. That is, the zip file 1912345.zip should contain the folder 1912345 with _only_ the files 1912345.Rmd and 1912345.html
+
+---
+
+This is to certify that the work I am submitting is my own. All external references and sources are clearly acknowledged and identified within the contents. I am aware of the University of Warwick regulation concerning plagiarism and collusion.
+
+No substantial part(s) of the work submitted here has also been submitted by me in other assessments for accredited courses of study, and I acknowledge that if this has been done an appropriate reduction in the mark I might otherwise have received will be made.
+
+I declare that this work is entirely my own in accordance with the University's Regulation 11 and the WBS guidelines on plagiarism and collusion. All external references and sources are clearly acknowledged and identified within the contents. No substantial part(s) of the work submitted here has also been submitted by me in other assessments for accredited courses of study, and I acknowledge that if this has been done it may result in me being reported for self-plagiarism and an appropriate reduction in marks may be made when marking this piece of work.
+
+# Section 1
+
+## Data Dictionary
+Below is a collection of data samples and its description.
+
+Variable                      | Description                                                                 
+--------                      | ---------------------------------------------------------------------------------------
+height                        | Height in cm
+start_weight                  | Weight in kg at the beginning of the trial
+end_weight                    | Weight in kg at the end of the trial
+age                           | Years of age
+sex                           | Gender of members
+impulsivity                   | Degree of propensity to act without thinking
+diet_cond                     | Diet condition plan of either regular, or no chocolate
+iq                            | IQ score
+
+## Loading, Factoring and Viewing the Data Frame
+
+```{r}
+# To load the data file 
+adult_diet_data <- read_csv("adult_diet_data.csv")
+
+# To view the types of data in the file
+str(adult_diet_data)
+
+# To convert strings into factors
+adult_diet_data$sex <- factor(adult_diet_data$sex) 
+adult_diet_data$diet_cond <- factor(adult_diet_data$diet_cond, levels=c("regular","no_chocolate"))
+
+# To check the data for missing data and outlier data
+# In this instance, there is an outlier data in the height variable
+summary(adult_diet_data)
+```
+
+## Identifying and Preserving Problematic Data
+
+``` {r}
+# To identify the row index and data value of the problematic data 
+outlier_height_index <- which(adult_diet_data$height >300)
+outlier_height_value <- adult_diet_data[outlier_height_index,"height"]
+
+# To correct and preserve the problematic data
+adult_diet_data[outlier_height_index, "height"] <- outlier_height_value/10
+
+# To confirm the problematic data has been corrected
+summary(adult_diet_data)
+```
+
+## Client Request
+
+### A plot showing the relationship between impulsivity and age.
+
+```{r}
+# To relabel factors in the data set
+adult_diet_data$sex <- fct_recode(adult_diet_data$sex, Male = "M", 
+                                  Female = "F") 
+adult_diet_data$diet_cond <- fct_recode(adult_diet_data$diet_cond, 
+                                        "No Chocolate Diet" =
+                                          "no_chocolate",
+                                        "Regular Diet" =
+                                          "regular")
+
+# To plot the relationship between Impulsivity and Age
+ggplot(adult_diet_data) + 
+  labs(title="Relationship between Impulsivity and Age", x="Age",
+       y="Impulsivity") +
+  theme(plot.title = element_text(size=16),
+        axis.title.x = element_text(size=14),
+        axis.title.y = element_text(size=14),
+        axis.text.x = element_text(size=12),
+        axis.text.y = element_text(size=12),
+        strip.text.x = element_text(size=14),
+        strip.text.y = element_text(size=14),
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size=14)) +
+  geom_point(position="jitter", shape=16, alpha=0.4, size=3,
+             aes(x=age, y=impulsivity)) + 
+  geom_smooth(aes(x=age, y=impulsivity), color="black", size=1.5)
+
+# To plot the relationship between Impulsivity and Age for different sexes
+ggplot(adult_diet_data) + 
+  labs(title="Relationship between Impulsivity and Age for different sexes",
+       x="Age", y="Impulsivity") +
+  theme(plot.title = element_text(size=16),
+        axis.title.x = element_text(size=14),
+        axis.title.y = element_text(size=14),
+        axis.text.x = element_text(size=12),
+        axis.text.y = element_text(size=12),
+        strip.text.x = element_text(size=14),
+        strip.text.y = element_text(size=14),
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size=14)) +
+  geom_point(position="jitter", shape=16, alpha=0.4, size=3,
+             aes(x=age, y=impulsivity, color=sex, fill=sex)) + 
+  geom_smooth(aes(x=age, y=impulsivity, color=sex, fill=sex), 
+              size=1.5)
+
+```
+
+### Summary statistics for BMI at the end of the trial.
+
+```{r}
+# To calculate the starting BMI, post-diet BMI and kg lost
+(BMI_weight_individual <- adult_diet_data %>%
+  group_by(diet_cond, sex) %>%
+  summarise(starting_BMI=round(start_weight/(height/100)^2, digits=4),
+            post_diet_BMI=round(end_weight/(height/100)^2, digits=4),
+            kg_lost=start_weight-end_weight))
+
+# To display first 10 rows of BMI_weight_individual object in a simple table
+head(BMI_weight_individual, 10) %>% 
+  knitr::kable(caption= "Summary Statistics (of first 10 samples)",
+               digits=2,
+               align="ccccc", 
+               col.names = c("Diet Condition",
+                             "Sex",
+                             "Starting BMI",
+                             "Post-Diet BMI",
+                             "Kg Lost"))
+
+# To calculate the mean values and standard deviations
+BMI_weight_summary <- BMI_weight_individual %>%
+  group_by(sex, diet_cond) %>%
+  summarise(mean_starting_BMI=round(mean(starting_BMI), digits=4),
+            sd_starting_BMI=round(sd(starting_BMI), digits=4),
+            mean_post_diet_BMI=round(mean(post_diet_BMI), digits=4),
+            sd_post_diet_BMI=round(sd(post_diet_BMI), digits=4),
+            mean_kg_lost=round(mean(kg_lost), digits=4),
+            sd_kg_lost=round(sd(kg_lost), digits=4))
+
+# To display BMI_weight_summary object in a simple table
+BMI_weight_summary %>%
+  knitr::kable(caption= "Grouped Summary Statistics",
+               digits=2,
+               align="cccccccc", 
+               col.names = c("Sex",
+                             "Diet Condition",
+                             "Mean Starting BMI",
+                             "SD Starting BMI",
+                             "Mean Post-Diet BMI",
+                             "SD Post-Diet BMI",
+                             "Mean Kg Lost",
+                             "SD Kg Lost"))
+
+```
+
+
+### Visualisation of the distribution of Post-Diet BMI.
+
+``` {r}
+# To calculate the average Post-Diet BMI
+calc_BMI <- adult_diet_data$end_weight/(adult_diet_data$height/100)^2
+avg_BMI <- round(mean(calc_BMI),2)
+
+# To plot the entire distribution of post_diet_BMI
+ggplot(BMI_weight_individual, aes(x=post_diet_BMI,y=..density..)) +
+  labs(title="Overall Distribution of Post-Diet BMI at the end of the trial.",
+       x=expression("Post-Diet BMI = "* frac(end_weight(kg),
+                                                  height(m^2))),
+       y="Density") +
+  theme(plot.title = element_text(size=16),
+        axis.title.x = element_text(size=14),
+        axis.title.y = element_text(size=14),
+        axis.text.x = element_text(size=12),
+        axis.text.y = element_text(size=12),
+        strip.text.x = element_text(size=14),
+        strip.text.y = element_text(size=14)) +
+  geom_histogram(alpha=0.75) + 
+  geom_density() +
+  geom_vline(xintercept = avg_BMI, col="green", size=2) +
+  annotate("text", label=paste("Mean Post-Diet: 23.99"), x=35, y=0.08,
+           col="black", size=4)
+
+# Preparation of facet value labels
+BMI_weight_individual_by_group <- BMI_weight_individual %>%
+  group_by(diet_cond, sex) %>%
+  summarise(mean=mean(post_diet_BMI))
+
+# Preparation of facet text labels
+f_label_female_reg <- filter(BMI_weight_individual_by_group,
+                             diet_cond=="Regular Diet", sex=="Female")
+f_label_female_nochoc <- filter(BMI_weight_individual_by_group,
+                                diet_cond=="No Chocolate Diet",
+                                sex=="Female")
+f_label_male_reg <- filter(BMI_weight_individual_by_group,
+                           diet_cond=="Regular Diet", sex=="Male")
+f_label_male_nochoc <- filter(BMI_weight_individual_by_group,
+                              diet_cond=="No Chocolate Diet",
+                              sex=="Male")
+
+# To plot the distributions of post_diet_BMI between sexes in each of the diet conditions
+ggplot(BMI_weight_individual) + 
+  geom_histogram(aes(x=post_diet_BMI, y=..density..), alpha=0.75, binwidth=1) +
+  geom_density(aes(x=post_diet_BMI, y=..density..)) +
+  facet_grid(diet_cond~sex) +
+  geom_text(data=f_label_female_reg, label="Mean Post-Diet: 26.32",
+            x=35, y=0.125, size=2.5) +
+  geom_text(data=f_label_female_nochoc, label="Mean Post-Diet: 24.19",
+            x=35, y=0.125, size=2.5) +
+  geom_text(data=f_label_male_reg, label="Mean Post-Diet: 22.78",
+            x=35, y=0.125, size=2.5) +
+  geom_text(data=f_label_male_nochoc, label="Mean Post-Diet: 21.87",
+            x=35, y=0.125, size=2.5) +
+  geom_vline(data=BMI_weight_individual_by_group,
+             mapping=aes(xintercept=mean), col="green") +
+  theme(plot.title = element_text(size=20),
+        axis.title.x = element_text(size=14),
+        axis.title.y = element_text(size=14),
+        axis.text.x = element_text(size=12),
+        axis.text.y = element_text(size=12),
+        strip.text.x = element_text(size=14),
+        strip.text.y = element_text(size=14)) +
+  labs(title="Distributions of Post-Diet BMI at the end of the trial.",
+       x=expression("Post-Diet BMI = "* frac(end_weight(kg),
+                                                  height(m^2))),
+       y="Density")
+
+```
+
+### t-test comparing diet plans.
+
+``` {r}
+# To add a new column "kg_lost" to the data frame
+adult_diet_data <- adult_diet_data %>%
+  mutate(kg_lost=start_weight-end_weight)
+
+# To run a t-test
+t.test(adult_diet_data$kg_lost~adult_diet_data$diet_cond)
+
+```
+
+
+# Section 2
+
+Plain English answer here!
+
+
+## A plot showing the relationship between impulsivity and age.
+
+
+### Observing the relationship between Impulsivity and Age. 
+From the sample of 400 observations obtained from the trial, four main age groups are observed namely, teen, adult, middle age adult and senior adult of ages, 13-19 years, 20-39 years, 40-59 years as well as 60 years and above, respectively.   
+
+```{r, echo=FALSE, message=FALSE}
+ggplot(adult_diet_data) + 
+  labs(title="Relationship between Impulsivity and Age", x="Age",
+       y="Impulsivity") +
+  theme(plot.title = element_text(size=16),
+        axis.title.x = element_text(size=14),
+        axis.title.y = element_text(size=14),
+        axis.text.x = element_text(size=12),
+        axis.text.y = element_text(size=12),
+        strip.text.x = element_text(size=14),
+        strip.text.y = element_text(size=14),
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size=14)) +
+  geom_point(position="jitter", shape=16, alpha=0.4, size=3,
+             aes(x=age, y=impulsivity)) + 
+  geom_smooth(aes(x=age, y=impulsivity), color="black", size=1.5)
+
+```
+
+When plotted on a scatter plot, the observations for the relationship between impulsivity and age appear to be random and non-linear with a wide range of impulsivity for every age group. Examining further with a loess line, it is observed that the impulsivity for adult is higher than teen, but lower for middle age adult than adult, and higher for senior adult than middle age adult. Therefore, a person growing up as a teen may see impulsivity increasing through to the phase of an adult before declining during the phase of a middle age adult and finally increasing again as a senior adult. However, it is worth noting that the sample sizes for teen and specifically, senior adult of ages 65 and above, are low as denoted by the standard error of the loess line.
+
+
+### Observing the relationship between Impulsivity and Age for different sexes.
+From the sample of 400 observations obtained from the trial, 200 samples are of male and female samples respectively.
+
+```{r, echo=FALSE, message=FALSE}
+ggplot(adult_diet_data) + 
+  labs(title="Relationship between Impulsivity and Age for different sexes", x="Age",
+       y="Impulsivity") +
+  theme(plot.title = element_text(size=16),
+        axis.title.x = element_text(size=14),
+        axis.title.y = element_text(size=14),
+        axis.text.x = element_text(size=12),
+        axis.text.y = element_text(size=12),
+        strip.text.x = element_text(size=14),
+        strip.text.y = element_text(size=14),
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size=14)) +
+  geom_point(position="jitter", shape=16, alpha=0.4, size=3,
+             aes(x=age, y=impulsivity, color=sex, fill=sex)) + 
+  geom_smooth(aes(x=age, y=impulsivity, color=sex, fill=sex), 
+              size=1.5)
+
+```
+
+When plotted on a scatter plot, it is again observed that the relationship between impulsivity and age appear to be random and non-linear with a fair distribution of samples between male and female members across every age group. However, examining further with the loess lines, it can be observed that males up to the ages of approximately 50, display a higher impulsivity than females. This trend is then reversed, with females above the ages of 50 tending to show higher impulsivity than males. From these observations, at a younger age, males may have higher impulsivity than females while at an older age, females may have higher impulsivity than males. 
+
+
+## Summary statistics for BMI at the end of the trial.
+
+
+### Tabulation of Starting BMI, Post-Diet BMI and Kilograms Lost.
+From the sample of 400 observations obtained from the trial, each member is grouped into the diet condition plan of either "Regular Diet", or "No Chocolate Diet" and the sex of the member of either "Male", or "Female". 
+
+``` {r, echo=FALSE, message=FALSE}
+
+(BMI_weight_individual <- adult_diet_data %>%
+  group_by(diet_cond,sex) %>%
+  summarise(starting_BMI=round(start_weight/(height/100)^2, digits=4),
+            post_diet_BMI=round(end_weight/(height/100)^2, digits=4),
+            kg_lost=start_weight-end_weight))
+
+```
+
+```{r, echo=FALSE, message=FALSE, results='asis'}
+head(BMI_weight_individual, 10) %>% 
+  knitr::kable(caption= "Summary Statistics (of first 10 samples)",
+               digits=2,
+               align="ccccc", 
+               col.names = c("Diet Condition",
+                             "Sex",
+                             "Starting BMI",
+                             "Post-Diet BMI",
+                             "Kg Lost"))
+
+```
+
+Thereafter, the variables below are tabulated for each member:
+
+* Body Mass Index, BMI is computed as weight(kg) / height(m^2)
+  + starting_BMI: The body mass index computed with the member's weight in kg, at the beginning of the trial.
+  + post_diet_BMI: The body mass index computed with the member's weight in kg, at the end of the trial.
+* kg_lost: The weight loss in kg by the member, from the beginning till the end of the trial. (A negative value would indicate weight gain in kg.)
+
+
+### Summary statistics with Mean and Standard Deviation for each sex, in each diet plan.
+From the data tabulated above, the results are then grouped into the diet condition plan of "Regular Diet" and "No Chocolate Diet" as well as grouped by the different sexes of "Male" and "Female". The mean and standard deviation are then calculated for the measures starting_BMI, post_diet_BMI and kg_lost. 
+``` {r, echo=FALSE, message=FALSE, results='asis'}
+BMI_weight_summary %>%
+  knitr::kable(caption= "Grouped Summary Statistics",
+               digits=2,
+               align="cccccccc", 
+               col.names = c("Sex",
+                             "Diet Condition",
+                             "Mean Starting BMI",
+                             "SD Starting BMI",
+                             "Mean Post-Diet BMI",
+                             "SD Post-Diet BMI",
+                             "Mean Kg Lost",
+                             "SD Kg Lost"))
+```
+
+From the grouped summary statistics, these observations are made:
+
+* __Members on the "Regular Diet" experienced higher BMI, and higher weight gain__
+  + "Females" and "Males" on the "Regular Diet" have higher Mean Post-Diet BMI of 26.32 and 22.78 at the end of the trial, versus the  Mean Starting BMI of 26.12 and 22.69 at the beginning of the trial. Attributing to these results, the groups experienced Mean Kg Lost of -0.56kg and -0.21kg respectively, which indicate gains in weight at the conclusion of this trial. 
+
+
+* __Members on the "No Chocolate Diet" experienced lower BMI, and higher weight loss__
+  + "Females" and "Males" on the "No Chocolate Diet" have lower Mean Post-Diet BMI of 24.19 and 21.87 at the end of the trial, versus the Mean Starting BMI of 25.57 and 22.77 at the beginning of the trial. Additionally, the groups experienced Mean Kg Lost of 3.53kg and 2.78kg respectively at the conclusion of this trial.
+
+
+* __Results of the "No Chocolate Diet" vary across different sexes__
+  + The benefits of the "No Chocolate Diet" in weight loss thereby lowering BMI, may vary across different sexes. As seen from the table, for groups in the "No Chocolate Diet", "Females" experienced a higher Mean Kg Lost of 3.53kg than "Males", which have a Mean Kg Lost of only 2.78kg. Therefore, this finding suggests that the benefits of weight loss from the "No Chocolate Diet" are greater among "Females" than "Males".
+  
+
+* __The benefits of the "No Chocolate Diet" are more consistent among "Females"__
+  + For groups in the "No Chocolate Diet", the lower standard deviation in SD Kg Lost of 4.84 for "Females" than "Males" indicates a lower dispersion of weight loss from its Mean Kg Lost of 3.53kg. Therefore, this finding suggests that the benefits from the "No Chocolate Diet" are more consistent for "Females" than "Males".
+
+
+* __The benefits of the "No Chocolate Diet" are more varied and extreme among "Males"__
+  + For groups in the "No Chocolate Diet", the higher standard deviation in SD Kg Lost of 5.27 for "Males" than "Females" indicates a higher dispersion of weight loss from its Mean Kg Lost of 2.78kg. Therefore, this finding suggests that the benefits of the "No Chocolate Diet" are more varied and extreme for "Males" than "Females".
+
+
+## Visualisation of the distribution of Post-Diet BMI.
+
+
+### Overall Distribution of Post-Diet BMI at the end of the trial.
+From the sample of 400 observations obtained from the trial, each member's body mass index at the of the trial, Post-Diet BMI is plotted into an overall distribution. 
+
+```{r, echo=FALSE, message=FALSE}
+ggplot(BMI_weight_individual, aes(x=post_diet_BMI,y=..density..)) +
+  labs(title="Overall Distribution of Post-Diet BMI at the end of the trial.",
+       x=expression("Post-Diet BMI = "* frac(end_weight(kg),
+                                                  height(m^2))),
+       y="Density") +
+  theme(plot.title = element_text(size=16),
+        axis.title.x = element_text(size=14),
+        axis.title.y = element_text(size=14),
+        axis.text.x = element_text(size=12),
+        axis.text.y = element_text(size=12),
+        strip.text.x = element_text(size=14),
+        strip.text.y = element_text(size=14)) +
+  geom_histogram(alpha=0.75) + 
+  geom_density() +
+  geom_vline(xintercept = avg_BMI, col="green", size=2) +
+  annotate("text", label=paste("Mean Post-Diet: 23.99"), x=35, y=0.08,
+           col="black", size=4)
+
+```
+
+The shape of the overall distribution is skewed right, which is also called a positive skew. This shape is attributed by the extreme outliers on its right tail with members in the trial having extreme Post-Diet BMI of close to 40. It is also worth noting that at the right tail of the overall distribution, there are two gaps with no observations.
+
+### Distributions of Post-Diet BMI between sexes in each of the diet conditions.
+
+From the sample of 400 observations obtained from the trial, each member's body mass index at the of the trial, Post-Diet BMI is plotted into distributions between sexes of "Female" and "Male", in each of the diet conditions of "Regular Diet" and "No Chocolate Diet".
+
+``` {r, echo=FALSE, message=FALSE}
+ggplot(BMI_weight_individual) + 
+  geom_histogram(aes(x=post_diet_BMI, y=..density..), alpha=0.75, binwidth=1) +
+  geom_density(aes(x=post_diet_BMI, y=..density..)) +
+  facet_grid(diet_cond~sex) +
+  geom_text(data=f_label_female_reg, label="Mean Post-Diet BMI: 26.32",
+            x=35, y=0.125, size=2.5) +
+  geom_text(data=f_label_female_nochoc, label="Mean Post-Diet BMI: 24.19",
+            x=35, y=0.125, size=2.5) +
+  geom_text(data=f_label_male_reg, label="Mean Post-Diet BMI: 22.78",
+            x=35, y=0.125, size=2.5) +
+  geom_text(data=f_label_male_nochoc, label="Mean Post-Diet BMI: 21.87",
+            x=35, y=0.125, size=2.5) +
+  geom_vline(data=BMI_weight_individual_by_group,
+             mapping=aes(xintercept=mean), col="green") +
+  theme(plot.title = element_text(size=20),
+        axis.title.x = element_text(size=14),
+        axis.title.y = element_text(size=14),
+        axis.text.x = element_text(size=12),
+        axis.text.y = element_text(size=12),
+        strip.text.x = element_text(size=14),
+        strip.text.y = element_text(size=14)) +
+  labs(title="Distributions of Post-Diet BMI at the end of the trial.",
+       x=expression("Post-Diet BMI = "* frac(end_weight(kg),
+                                                  height(m^2))),
+       y="Density")
+
+```
+
+From the distributions, it can be seen that the distributions for "Female" and "Male" on the "No Chocolate Diet" are shifted more to the left with lower means Post-Diet BMI of 24.19 and 21.87 respectively, when compared to the distributions of "Female" and "Male" on the "Regular Diet" with higher means Post-Diet BMI of 26.32 and 22.78 respectively. Therefore, it is clear from this trial that the "No Chocolate Diet" have contributed to lowering the Post-Diet BMI of its members.
+
+## t-test comparing diet plans.
+
+```{r, echo=FALSE, message=FALSE}
+adult_diet_data <- adult_diet_data %>%
+  mutate(kg_lost=start_weight-end_weight)
+
+t.test(adult_diet_data$kg_lost~adult_diet_data$diet_cond)
+```
+
+At the conclusion of the trial, the mean in kg_lost for members on the "Regular Diet" is negative, which indicates an actual gain in weight of 0.38kg. However, the mean in kg_lost for members on the "No Chocolate Diet" is positive, which indicates an actual loss in weight of 3.16kg. The mean in kg_lost is significantly larger for members on the "No Chocolate Diet", Welch *t*(278) = -7.06, *p*<.0001, with a difference of 3.54kg. 
+
+---

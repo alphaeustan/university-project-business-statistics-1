@@ -3,4 +3,4 @@ Context: This repository is for published code of my assignments and dissertatio
 
 Objective: The purpose of this repository is to inspire improvement to my existing codes, and assist aspiring programmers like myself. 
 
-The files entail the analyses of chocolate, and its impact to a person's regular diet plan. 
+This project entails the analyses of chocolate, and its impact to a person's regular diet plan. 
